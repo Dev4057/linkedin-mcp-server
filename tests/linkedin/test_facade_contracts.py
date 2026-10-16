@@ -122,7 +122,10 @@ def test_permanent_facade_aliases_are_the_canonical_objects():
 
 async def test_registered_tools_match_extractor_delegates():
     tools = await create_mcp_server().list_tools()
-    tool_names = {tool.name for tool in tools}
+    # The lead-generation tools read the local lead store, not the extractor
+    # facade, so they have no delegate; the one that does drive the browser
+    # (find_icp_leads) goes through search_people's delegate many times.
+    tool_names = {tool.name for tool in tools if "leadgen" not in (tool.tags or set())}
 
     assert tool_names == {*TOOL_DELEGATES, "close_session"}
     assert set(TOOL_DELEGATES.values()) == TOOL_FACADE_METHODS

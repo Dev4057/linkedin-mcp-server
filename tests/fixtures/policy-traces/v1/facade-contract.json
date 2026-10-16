@@ -86,7 +86,7 @@
       },
       "search_people": {
         "coroutine": true,
-        "signature": "(self, keywords: 'str', location: 'str | None' = None, network: 'list[str] | None' = None, current_company: 'str | None' = None) -> 'dict[str, Any]'"
+        "signature": "(self, keywords: 'str', location: 'str | None' = None, network: 'list[str] | None' = None, current_company: 'str | None' = None, page: 'int | None' = None) -> 'dict[str, Any]'"
       },
       "search_posts": {
         "coroutine": true,
@@ -154,6 +154,96 @@
           "required": [
             "linkedin_username"
           ],
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "export_leads": {
+        "input": {
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "default": "csv",
+              "description": "\"csv\" (default) or \"json\".",
+              "type": "string"
+            },
+            "limit": {
+              "default": 1000,
+              "description": "Maximum rows (default 1000).",
+              "maximum": 5000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "min_score": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Only leads scored at or above this value."
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Optional status filter (see list_leads)."
+            }
+          },
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "find_icp_leads": {
+        "input": {
+          "additionalProperties": false,
+          "properties": {
+            "max_pages_per_search": {
+              "anyOf": [
+                {
+                  "maximum": 20,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Pages to read per search (default from icp.yaml, 3)."
+            },
+            "max_results": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Stop after this many NEW leads (default from icp.yaml, 100)."
+            }
+          },
           "type": "object"
         },
         "output": {
@@ -506,6 +596,80 @@
           "type": "object"
         }
       },
+      "leadgen_stats": {
+        "input": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "list_leads": {
+        "input": {
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "default": 50,
+              "description": "Page size (default 50).",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "min_score": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Only leads scored at or above this value."
+            },
+            "offset": {
+              "default": 0,
+              "description": "Skip this many rows.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_query": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Only leads found by this search label\n(as shown in find_icp_leads per_search[].query)."
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter by pipeline status: new, qualified, disqualified,\nenriched, contacted, replied, closed."
+            }
+          },
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
       "search_companies": {
         "input": {
           "additionalProperties": false,
@@ -700,6 +864,20 @@
               ],
               "default": null,
               "description": "Optional connection-degree filter. Each element is one of\n\"F\" (1st-degree), \"S\" (2nd-degree), \"O\" (3rd-degree and beyond).\nExample: [\"F\"] to only return 1st-degree connections. A single\ntoken (\"F\") or a comma-separated string (\"F,S\") is also\naccepted, for clients that cannot transmit an array."
+            },
+            "page": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Optional results page, 1-based (LinkedIn shows 10 people per\npage). Omit or pass 1 for the first page; pass 2, 3, ... to\nread further pages of the same search. For a whole ICP at once,\nuse find_icp_leads, which pages, de-duplicates and saves."
             }
           },
           "required": [
@@ -783,6 +961,137 @@
             "linkedin_username",
             "message",
             "confirm_send"
+          ],
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "show_icp": {
+        "input": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "update_lead": {
+        "input": {
+          "additionalProperties": false,
+          "properties": {
+            "company": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Correct the company name."
+            },
+            "email": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Work email once found."
+            },
+            "linkedin_username": {
+              "description": "The lead's LinkedIn username (from list_leads).",
+              "type": "string"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Free text."
+            },
+            "score": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "0-100 fit score."
+            },
+            "score_reason": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "One line explaining the score."
+            },
+            "signals": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Buying signals observed (e.g. \"hiring SDRs\", \"posted about outbound\")."
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "New status (new, qualified, disqualified, enriched,\ncontacted, replied, closed)."
+            },
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Correct the job title."
+            }
+          },
+          "required": [
+            "linkedin_username"
           ],
           "type": "object"
         },

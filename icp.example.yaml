@@ -1,0 +1,54 @@
+# Ideal customer profile for find_icp_leads.
+# Copy to icp.yaml (same folder you start the server from) and edit.
+# Every title x every location becomes one LinkedIn people search.
+
+name: example-b2b-saas-marketing
+
+titles:
+  - Marketing Director
+  - Head of Growth
+  - VP Marketing
+
+locations:
+  - United States
+  - Canada
+
+# Appended to every search: "Marketing Director SaaS B2B"
+keywords: [SaaS, B2B]
+
+# Anyone whose name, headline or location contains one of these is skipped.
+exclude_keywords:
+  - recruiter
+  - student
+  - intern
+  - open to work
+  - freelance
+
+# Connection degree: F = 1st, S = 2nd, O = 3rd+. Omit for all.
+network: [S, O]
+
+# Numeric LinkedIn company ids to restrict to (get_company_profile ->
+# references["about"] -> company_urn). Usually empty.
+company_urns: []
+
+max_pages_per_search: 3   # 10 people per page
+max_results: 100          # stop after this many NEW leads per run
+
+# Used by phase two (score_lead). Harmless to fill in now.
+scoring:
+  must_have: [marketing, growth, demand]
+  nice_to_have: [outbound, pipeline, lead generation, ABM, HubSpot]
+  disqualify: [recruiter, agency owner, student]
+  min_score: 60
+
+# Optional: override the LEADGEN_* environment settings for this campaign.
+leadgen:
+  daily_caps:
+    searches: 20
+    profile_views: 80
+    connects: 15
+    messages: 10
+  working_hours: "8-20"     # local time; "off" to disable
+  min_delay_seconds: 4
+  max_delay_seconds: 12
+  seen_days: 30

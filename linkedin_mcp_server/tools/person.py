@@ -149,6 +149,7 @@ def register_person_tools(
         location: str | None = None,
         network: StrList | None = None,
         current_company: str | None = None,
+        page: Annotated[int, Field(ge=1, le=100)] | None = None,
     ) -> dict[str, Any]:
         """
         Search for people on LinkedIn.
@@ -170,6 +171,10 @@ def register_person_tools(
                 exposed under references["about"]. For company-wide employee
                 demographics (location/education/function breakdown) plus a
                 slug-based lookup, use get_company_employees instead.
+            page: Optional results page, 1-based (LinkedIn shows 10 people per
+                page). Omit or pass 1 for the first page; pass 2, 3, ... to
+                read further pages of the same search. For a whole ICP at once,
+                use find_icp_leads, which pages, de-duplicates and saves.
 
         Returns:
             Dict with url, sections (name -> raw text), and optional references.
@@ -184,6 +189,7 @@ def register_person_tools(
                 location=location,
                 network=network,
                 current_company=current_company,
+                page=page,
             )
         except FilterValidationError as e:
             raise ToolError(str(e)) from e
@@ -208,6 +214,7 @@ def register_person_tools(
                     location,
                     network=network,
                     current_company=current_company,
+                    page=page,
                 )
             except FilterValidationError as e:
                 # Validation messages carry actionable detail; surface

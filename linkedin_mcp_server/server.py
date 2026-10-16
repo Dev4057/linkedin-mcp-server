@@ -34,6 +34,8 @@ from linkedin_mcp_server.drivers.browser import (
 )
 from linkedin_mcp_server.daemon.auth_repair import OwnerAuthSignalMiddleware
 from linkedin_mcp_server.error_handler import raise_tool_error
+from linkedin_mcp_server.leadgen.middleware import BudgetMiddleware
+from linkedin_mcp_server.leadgen.tools import register_leadgen_tools
 from linkedin_mcp_server.sequential_tool_middleware import (
     SequentialToolExecutionMiddleware,
 )
@@ -267,6 +269,10 @@ def create_mcp_server(
     # actually needs it waiting for one held by a caller that never uses it.
     if role.drives_browser:
         mcp.add_middleware(SequentialToolExecutionMiddleware(silent_owner=silent_owner))
+        # Inside the serializing middleware: the budget is charged by the
+        # process that is about to load the page, right before it does, so a
+        # queued call that never gets the browser is never charged for it.
+        mcp.add_middleware(BudgetMiddleware())
     # The notice is appended to one tool result per process, so it belongs
     # wherever a user reads results. On a shared owner it would reach whichever
     # client happened to call first and nobody after that, however many clients
@@ -299,6 +305,7 @@ def create_mcp_server(
         register_messaging_tools(mcp, tool_timeout=tool_timeout)
         register_feed_tools(mcp, tool_timeout=tool_timeout)
         register_post_tools(mcp, tool_timeout=tool_timeout)
+        register_leadgen_tools(mcp, tool_timeout=tool_timeout)
 
         # Inside the gate with the rest, and easy to miss because it is the one
         # tool defined here rather than in a `register_*` call. Left out of the

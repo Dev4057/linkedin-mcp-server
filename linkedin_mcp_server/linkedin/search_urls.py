@@ -124,6 +124,7 @@ def build_people_search_url(
     location: str | None = None,
     network: list[str] | None = None,
     current_company: str | None = None,
+    page: int | None = None,
 ) -> str:
     """Build a LinkedIn people search URL, refusing filters LinkedIn ignores.
 
@@ -132,7 +133,15 @@ def build_people_search_url(
     token and a plain-text ``currentCompany`` are each accepted by the URL and
     then dropped, which answers with the unfiltered result set while the
     request still reads as filtered.
+
+    ``page`` is LinkedIn's own 1-based ``page=`` parameter (10 results per
+    page). ``None`` and ``1`` both mean the first page and add nothing to the
+    URL, so an existing caller's URL is unchanged. Anything below 1 is refused
+    rather than sent: LinkedIn answers ``page=0`` with the first page, which
+    would make a paging loop read page one twice and report it as two.
     """
+    if page is not None and page < 1:
+        raise FilterValidationError(f"page must be 1 or greater; got {page!r}")
     if network is not None:
         invalid = [t for t in network if t not in NETWORK_TOKENS]
         if invalid:
@@ -156,6 +165,8 @@ def build_people_search_url(
         params += f"&network={_encode_list_facet(network)}"
     if current_company:
         params += f"&currentCompany={_encode_list_facet([current_company])}"
+    if page is not None and page > 1:
+        params += f"&page={page}"
 
     return f"https://www.linkedin.com/search/results/people/?{params}"
 

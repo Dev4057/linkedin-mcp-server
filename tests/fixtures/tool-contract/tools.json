@@ -73,6 +73,124 @@
     "_meta": {
       "fastmcp": {
         "tags": [
+          "leadgen"
+        ]
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    },
+    "description": "Export leads as CSV or JSON text, ready for Apollo enrichment or a CRM.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "default": "csv",
+          "description": "\"csv\" (default) or \"json\".",
+          "type": "string"
+        },
+        "limit": {
+          "default": 1000,
+          "description": "Maximum rows (default 1000).",
+          "maximum": 5000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_score": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only leads scored at or above this value."
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional status filter (see list_leads)."
+        }
+      },
+      "type": "object"
+    },
+    "name": "export_leads",
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "title": "Export Leads"
+  },
+  {
+    "_meta": {
+      "fastmcp": {
+        "tags": [
+          "leadgen",
+          "search"
+        ]
+      }
+    },
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "description": "Find people matching the ideal customer profile and save them as leads.\n\nReads icp.yaml (titles, locations, keywords, exclusions), runs one\nLinkedIn people search per title x location, pages through each,\nskips anyone matching exclude_keywords, and stores every new person in\nthe leads database with status \"new\". People already in the database\nare counted as already_known and not stored twice.\n\nStops early when max_results new leads are found, when a search runs\ndry, when LinkedIn rate-limits, or when today's search budget is used\nup (see leadgen_stats). Each page read costs one \"searches\" unit.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "max_pages_per_search": {
+          "anyOf": [
+            {
+              "maximum": 20,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Pages to read per search (default from icp.yaml, 3)."
+        },
+        "max_results": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stop after this many NEW leads (default from icp.yaml, 100)."
+        }
+      },
+      "type": "object"
+    },
+    "name": "find_icp_leads",
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "title": "Find ICP Leads"
+  },
+  {
+    "_meta": {
+      "fastmcp": {
+        "tags": [
           "company"
         ]
       }
@@ -585,6 +703,106 @@
     "_meta": {
       "fastmcp": {
         "tags": [
+          "leadgen"
+        ]
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    },
+    "description": "Today's LinkedIn budget use, lead counts by status, and recent runs.\n\nReturns:\n    {budget: {day, working_hours, within_hours, actions: {...}},\n     leads: {total, new, qualified, ...},\n     settings: {db_path, icp_path, seen_days, delay_seconds},\n     recent_runs: [...]}",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "leadgen_stats",
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "title": "Lead-gen Stats"
+  },
+  {
+    "_meta": {
+      "fastmcp": {
+        "tags": [
+          "leadgen"
+        ]
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    },
+    "description": "List leads from the local database (no LinkedIn access).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "default": 50,
+          "description": "Page size (default 50).",
+          "maximum": 500,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_score": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only leads scored at or above this value."
+        },
+        "offset": {
+          "default": 0,
+          "description": "Skip this many rows.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source_query": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only leads found by this search label\n(as shown in find_icp_leads per_search[].query)."
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Filter by pipeline status: new, qualified, disqualified,\nenriched, contacted, replied, closed."
+        }
+      },
+      "type": "object"
+    },
+    "name": "list_leads",
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "title": "List Leads"
+  },
+  {
+    "_meta": {
+      "fastmcp": {
+        "tags": [
           "company",
           "search"
         ]
@@ -832,6 +1050,20 @@
           ],
           "default": null,
           "description": "Optional connection-degree filter. Each element is one of\n\"F\" (1st-degree), \"S\" (2nd-degree), \"O\" (3rd-degree and beyond).\nExample: [\"F\"] to only return 1st-degree connections. A single\ntoken (\"F\") or a comma-separated string (\"F,S\") is also\naccepted, for clients that cannot transmit an array."
+        },
+        "page": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional results page, 1-based (LinkedIn shows 10 people per\npage). Omit or pass 1 for the first page; pass 2, 3, ... to\nread further pages of the same search. For a whole ICP at once,\nuse find_icp_leads, which pages, de-duplicates and saves."
         }
       },
       "required": [
@@ -954,5 +1186,162 @@
       "type": "object"
     },
     "title": "Send Message"
+  },
+  {
+    "_meta": {
+      "fastmcp": {
+        "tags": [
+          "leadgen"
+        ]
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    },
+    "description": "Show the parsed icp.yaml and the exact searches find_icp_leads will run.\n\nReturns:\n    {icp: {...}, searches: [{keywords, location, network, current_company}]}",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "show_icp",
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "title": "Show ICP"
+  },
+  {
+    "_meta": {
+      "fastmcp": {
+        "tags": [
+          "leadgen"
+        ]
+      }
+    },
+    "annotations": {
+      "idempotentHint": true
+    },
+    "description": "Update one lead in the local database.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "company": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Correct the company name."
+        },
+        "email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Work email once found."
+        },
+        "linkedin_username": {
+          "description": "The lead's LinkedIn username (from list_leads).",
+          "type": "string"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Free text."
+        },
+        "score": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "0-100 fit score."
+        },
+        "score_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One line explaining the score."
+        },
+        "signals": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Buying signals observed (e.g. \"hiring SDRs\", \"posted about outbound\")."
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "New status (new, qualified, disqualified, enriched,\ncontacted, replied, closed)."
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Correct the job title."
+        }
+      },
+      "required": [
+        "linkedin_username"
+      ],
+      "type": "object"
+    },
+    "name": "update_lead",
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "title": "Update Lead"
   }
 ]
