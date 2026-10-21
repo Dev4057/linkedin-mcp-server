@@ -112,3 +112,10 @@ The three contract fixtures that pin the tool inventory
 `tests/fixtures/policy-traces/v1/facade-contract.json`, and the counts in
 `tests/linkedin/`) were re-recorded for the new tools and the `page`
 parameter; the diffs are additions only.
+
+## Dashboard
+
+A local web console wraps all of the above: `uv run leadgen-ui` opens
+http://127.0.0.1:8765 with pages for the target profile, LinkedIn sign-in,
+engine control, running `find_icp_leads` with a live log, the leads table,
+a tool console and a guide. See [leadgen-ui.md](leadgen-ui.md).

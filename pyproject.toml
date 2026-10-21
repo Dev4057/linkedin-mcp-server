@@ -65,6 +65,7 @@ Changelog = "https://github.com/stickerdaniel/linkedin-mcp-server/releases"
 
 [project.scripts]
 mcp-server-linkedin = "linkedin_mcp_server.cli_main:main"
+leadgen-ui = "linkedin_mcp_server.leadgen.ui.__main__:main"
 
 [build-system]
 requires = ["setuptools>=77.0.3"]
@@ -75,7 +76,7 @@ include = ["linkedin_mcp_server*"]
 exclude = ["assets*", "docs*", "tests*"]
 
 [tool.setuptools.package-data]
-linkedin_mcp_server = ["py.typed"]
+linkedin_mcp_server = ["py.typed", "leadgen/ui/static/*", "leadgen/ui/guide.md"]
 
 [tool.ruff.lint]
 # Preserve Ruff's pre-0.16 default rule set instead of adopting new rules implicitly.

@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leadgen console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000000; --panel:#070A0C; --panel-2:#0B1013; --line:#17231D; --line-2:#24362C;
+  --text:#D6E2DA; --muted:#6F8A7C; --dim:#3E5247;
+  --green:#39FF14; --green-2:#1FB50C; --green-ink:#052B00;
+  --blue:#00E5FF; --blue-2:#0094A8; --blue-ink:#00262B;
+  --red:#FF3B5C; --amber:#FFB020;
+  --sans:"Space Grotesk",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --rail:224px; --strip:112px;
+}
+*{box-sizing:border-box;border-radius:0!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.5 var(--sans)}
+body{display:grid;grid-template-columns:var(--rail) 1fr;grid-template-rows:var(--strip) 1fr;height:100vh;overflow:hidden}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-weight:500;margin:0}
+h1{font-size:22px;letter-spacing:-.01em}h2{font-size:17px}h3{font-size:14px;color:var(--muted)}
+p{margin:0 0 10px;max-width:72ch}
+code,.mono{font-family:var(--mono);font-size:12.5px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* rail */
+#rail{grid-row:1/3;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column}
+#brand{padding:18px 18px 14px;border-bottom:1px solid var(--line)}
+#brand .name{font-size:18px;font-weight:600;letter-spacing:-.02em}
+#brand .name b{color:var(--green);font-weight:600}
+#brand .sub{color:var(--muted);font-size:12px;margin-top:2px}
+#nav{display:flex;flex-direction:column;padding:8px 0}
+#nav button{display:flex;align-items:center;gap:10px;padding:10px 18px;background:none;border:0;border-left:2px solid transparent;text-align:left;cursor:pointer;color:var(--muted)}
+#nav button:hover{color:var(--text);background:var(--panel-2)}
+#nav button.active{color:var(--text);border-left-color:var(--green);background:var(--panel-2)}
+#nav button .k{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:auto}
+#rail .foot{margin-top:auto;padding:14px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.light{display:inline-block;width:8px;height:8px;background:var(--dim);vertical-align:middle;margin-right:7px}
+.light.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.light.busy{background:var(--blue);box-shadow:0 0 8px var(--blue);animation:blink 1s steps(2) infinite}
+.light.bad{background:var(--red)}
+@keyframes blink{50%{opacity:.25}}
+
+/* pipeline strip (hero) */
+#strip{grid-column:2;border-bottom:1px solid var(--line);background:var(--panel);position:relative;display:flex;align-items:center;padding:0 28px;gap:0;overflow:hidden}
+#strip::before{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:28px 28px;opacity:.35;pointer-events:none}
+.stage{position:relative;z-index:1;min-width:132px;padding:10px 14px;border:1px solid var(--line-2);background:var(--bg);display:flex;flex-direction:column;gap:2px}
+.stage .t{font-weight:500}
+.stage .d{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.stage.on{border-color:var(--green);box-shadow:0 0 0 1px var(--green-ink) inset,0 0 18px rgba(57,255,20,.18)}
+.stage.on .t{color:var(--green)}
+.stage.hot{border-color:var(--blue)}.stage.hot .t{color:var(--blue)}
+.wire{position:relative;z-index:1;flex:1;height:1px;background:var(--line-2);min-width:28px;overflow:visible}
+.wire .pkt{position:absolute;top:-2px;left:0;width:14px;height:5px;background:var(--blue);box-shadow:0 0 10px var(--blue);opacity:0}
+#strip.running .wire .pkt{animation:travel 1.4s linear infinite}
+#strip.running .wire:nth-child(4) .pkt{animation-delay:.35s}
+#strip.running .wire:nth-child(6) .pkt{animation-delay:.7s}
+#strip.running .wire:nth-child(8) .pkt{animation-delay:1.05s}
+@keyframes travel{0%{left:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:calc(100% - 14px);opacity:0}}
+#strip .meter{position:relative;z-index:1;margin-left:28px;min-width:230px;border-left:1px solid var(--line);padding-left:20px}
+#strip .meter .l{font-size:12px;color:var(--muted)}
+#strip .meter .v{font-family:var(--mono);font-size:13px}
+.bar{height:6px;background:var(--line);margin-top:6px;position:relative}
+.bar i{display:block;height:100%;background:var(--green);width:0;transition:width .4s}
+.bar.blue i{background:var(--blue)}
+
+/* main */
+#main{grid-column:2;overflow:auto;padding:26px 28px 40px}
+.page{display:none;max-width:1240px}.page.active{display:block}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px}
+.head p{color:var(--muted);margin:4px 0 0}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+@media (max-width:1100px){.g3,.g4{grid-template-columns:1fr 1fr}}
+@media (max-width:820px){body{grid-template-columns:1fr}#rail{display:none}#strip,#main{grid-column:1}.g2,.g3,.g4{grid-template-columns:1fr}}
+.panel{border:1px solid var(--line);background:var(--panel);padding:16px 18px}
+.panel h3{margin-bottom:10px}
+.stat .n{font-size:30px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.stat .n.g{color:var(--green)}.stat .n.b{color:var(--blue)}
+.stat .l{color:var(--muted);font-size:12px;margin-top:4px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line-2);background:var(--panel-2);padding:8px 14px;cursor:pointer;font-weight:500;line-height:1.2}
+.btn:hover{border-color:var(--text)}
+.btn.go{background:var(--green);color:var(--green-ink);border-color:var(--green)}
+.btn.go:hover{background:#5CFF3E}
+.btn.blue{background:var(--blue-ink);color:var(--blue);border-color:var(--blue-2)}
+.btn.blue:hover{border-color:var(--blue)}
+.btn.danger{color:var(--red);border-color:#5a1f29}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+input[type=text],input[type=number],select,textarea{background:var(--bg);border:1px solid var(--line-2);padding:7px 10px;color:var(--text);min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);outline:none}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--muted)}
+label.f input,label.f select{color:var(--text)}
+.chip{display:inline-block;padding:2px 8px;border:1px solid var(--line-2);font-size:12px;font-family:var(--mono)}
+.chip.g{color:var(--green);border-color:var(--green-2)}.chip.b{color:var(--blue);border-color:var(--blue-2)}
+.chip.r{color:var(--red);border-color:#5a1f29}.chip.a{color:var(--amber);border-color:#5a4210}
+.note{border-left:2px solid var(--blue);padding:8px 12px;background:var(--panel-2);color:var(--muted);font-size:13px}
+.note.warn{border-left-color:var(--amber)}
+.err{color:var(--red);font-family:var(--mono);font-size:12.5px;white-space:pre-wrap}
+.ok{color:var(--green)}
+
+/* log */
+.log{background:var(--bg);border:1px solid var(--line);font-family:var(--mono);font-size:12.5px;line-height:1.55;padding:10px 12px;height:260px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.log.tall{height:420px}
+.log .ts{color:var(--dim)}.log .info{color:var(--text)}.log .ok{color:var(--green)}.log .warn{color:var(--amber)}.log .error{color:var(--red)}
+.log:empty::before{content:"Nothing yet. Save a target profile, start the engine, then run Find leads.";color:var(--dim)}
+.log .cur{display:inline-block;width:8px;height:14px;background:var(--green);vertical-align:-2px;animation:blink 1s steps(2) infinite}
+
+/* editor */
+.editor{display:grid;grid-template-columns:1fr 360px;gap:14px}
+@media (max-width:1100px){.editor{grid-template-columns:1fr}}
+textarea.yaml{width:100%;min-height:520px;font-family:var(--mono);font-size:13px;line-height:1.5;tab-size:2;resize:vertical;background:var(--bg)}
+.searches{font-family:var(--mono);font-size:12.5px;max-height:320px;overflow:auto;border:1px solid var(--line);padding:8px 10px;background:var(--bg)}
+.searches div{padding:3px 0;border-bottom:1px dashed var(--line)}
+
+/* table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel)}
+tbody tr:hover{background:var(--panel-2)}
+td .sub{color:var(--muted);font-size:12px}
+td select,td input{padding:4px 6px;font-size:12.5px}
+.score{font-family:var(--mono)}
+.score.hi{color:var(--green)}.score.mid{color:var(--amber)}.score.lo{color:var(--red)}
+.twrap{overflow:auto;max-height:62vh;border:1px solid var(--line)}
+.empty{padding:36px;text-align:center;color:var(--muted)}
+
+/* session radar */
+.radar{position:relative;width:88px;height:88px;border:1px solid var(--line-2);overflow:hidden;flex:none}
+.radar::before{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg,rgba(57,255,20,.35),transparent 60deg,transparent)}
+.radar.scan::before{animation:spin 1.6s linear infinite}
+.radar::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;background:var(--dim)}
+.radar.good::after{background:var(--green);box-shadow:0 0 10px var(--green)}
+.radar.bad::after{background:var(--red)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* progress */
+.prog{height:10px;background:var(--line);position:relative;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--green);width:0;transition:width .3s}
+.prog.indet i{width:30%;animation:slide 1.2s linear infinite;background:var(--blue)}
+@keyframes slide{from{margin-left:-30%}to{margin-left:100%}}
+
+/* tools */
+.tools{display:grid;grid-template-columns:260px 1fr;gap:14px}
+@media (max-width:1000px){.tools{grid-template-columns:1fr}}
+.toollist button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:9px 10px;cursor:pointer;color:var(--text)}
+.toollist button:hover,.toollist button.active{background:var(--panel-2);color:var(--green)}
+.toollist .tag{float:right;font-family:var(--mono);font-size:11px;color:var(--dim)}
+pre.out{background:var(--bg);border:1px solid var(--line);padding:10px 12px;font-family:var(--mono);font-size:12.5px;max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word;margin:0}
+.args{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* guide */
+.guide{max-width:78ch;line-height:1.65}
+.guide h2{margin:26px 0 8px;color:var(--green);font-size:18px}
+.guide h3{margin:18px 0 6px;color:var(--text);font-size:15px}
+.guide ul,.guide ol{padding-left:22px}
+.guide li{margin:3px 0}
+.guide code{background:var(--panel-2);padding:1px 5px;border:1px solid var(--line)}
+.guide table{margin:8px 0 14px}
+.guide blockquote{border-left:2px solid var(--blue);margin:10px 0;padding:6px 12px;color:var(--muted)}
+
+/* toast */
+#toast{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:50}
+#toast div{background:var(--panel);border:1px solid var(--line-2);border-left:2px solid var(--green);padding:10px 14px;min-width:260px;font-size:13px;animation:pop .2s ease-out}
+#toast div.err{border-left-color:var(--red);color:var(--text);font-family:var(--sans);white-space:normal}
+@keyframes pop{from{transform:translateY(8px);opacity:0}}
+</style>
+</head>
+<body>
+
+<aside id="rail">
+  <div id="brand">
+    <div class="name">lead<b>gen</b> console</div>
+    <div class="sub">LinkedIn MCP · local</div>
+  </div>
+  <nav id="nav">
+    <button data-page="overview" class="active">Overview<span class="k">1</span></button>
+    <button data-page="icp">Target profile<span class="k">2</span></button>
+    <button data-page="session">LinkedIn &amp; engine<span class="k">3</span></button>
+    <button data-page="run">Find leads<span class="k">4</span></button>
+    <button data-page="leads">Leads<span class="k">5</span></button>
+    <button data-page="tools">Tool console<span class="k">6</span></button>
+    <button data-page="guide">Guide<span class="k">7</span></button>
+  </nav>
+  <div class="foot">
+    <div><span class="light" id="l-engine"></span>Engine <span id="t-engine">off</span></div>
+    <div><span class="light" id="l-session"></span>LinkedIn <span id="t-session">unknown</span></div>
+    <div><span class="light" id="l-job"></span>Job <span id="t-job">idle</span></div>
+  </div>
+</aside>
+
+<header id="strip" aria-label="Pipeline">
+  <div class="stage" id="s-icp"><span class="t">Target profile</span><span class="d" id="s-icp-d">—</span></div>
+  <div class="wire"><i class="pkt"></i></div>
+  <div class="stage" id="s-search"><span class="t">Search agent</span><span class="d" id="s-search-d">idle</span></div>
+  <div class="wire"><i class="pkt"></i></div>
+  <div class="stage" id="s-parse"><span class="t">Parse &amp; filter</span><span class="d" id="s-parse-d">—</span></div>
+  <div class="wire"><i class="pkt"></i></div>
+  <div class="stage" id="s-store"><span class="t">Lead store</span><span class="d" id="s-store-d">0 leads</span></div>
+  <div class="wire"><i class="pkt"></i></div>
+  <div class="stage" id="s-export"><span class="t">Export</span><span class="d">csv · json</span></div>
+  <div class="meter">
+    <div class="l">Today's search budget</div>
+    <div class="v" id="m-search">0 / 0</div>
+    <div class="bar"><i id="m-search-bar"></i></div>
+    <div class="l" style="margin-top:8px">Profile views</div>
+    <div class="bar blue"><i id="m-view-bar"></i></div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- OVERVIEW -->
+<section class="page active" id="p-overview">
+  <div class="head"><div><h1>Overview</h1><p>What the pipeline has done so far and what it may still do today.</p></div>
+    <div class="row"><button class="btn" onclick="go('run')">Find leads</button><button class="btn blue" onclick="go('leads')">Open leads</button></div></div>
+  <div class="grid g4" style="margin-bottom:14px">
+    <div class="panel stat"><div class="n g" id="o-total">0</div><div class="l">leads in the store</div></div>
+    <div class="panel stat"><div class="n" id="o-new">0</div><div class="l">new, not yet scored</div></div>
+    <div class="panel stat"><div class="n b" id="o-qual">0</div><div class="l">qualified</div></div>
+    <div class="panel stat"><div class="n" id="o-today">0</div><div class="l">searches used today</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="panel"><h3>Daily budget</h3><div id="o-budget"></div><div class="note" id="o-hours" style="margin-top:10px"></div></div>
+    <div class="panel"><h3>Recent runs</h3><div id="o-runs" class="mono" style="font-size:12.5px"></div></div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h3>Activity</h3><div class="log" id="log-overview"></div></div>
+</section>
+
+<!-- ICP -->
+<section class="page" id="p-icp">
+  <div class="head"><div><h1>Target profile</h1><p>Who you want to reach. Each title × location becomes one LinkedIn search. Saved to <code id="icp-path">icp.yaml</code>.</p></div>
+    <div class="row"><button class="btn" onclick="validateIcp()">Check</button><button class="btn go" onclick="saveIcp()">Save profile</button></div></div>
+  <div class="editor">
+    <div><textarea class="yaml" id="icp-text" spellcheck="false" oninput="icpDirty()"></textarea>
+      <div id="icp-msg" style="margin-top:8px"></div></div>
+    <div>
+      <div class="panel"><h3>Searches this profile will run</h3><div class="searches" id="icp-searches"></div>
+        <div class="row" style="margin-top:10px"><span class="chip b" id="icp-count">0 searches</span><span class="chip" id="icp-pages">0 pages max</span></div></div>
+      <div class="panel" style="margin-top:14px"><h3>Fields</h3>
+        <p><code>titles</code> job titles to search (required).<br><code>locations</code> one search per location; omit for worldwide.<br><code>keywords</code> appended to every search.<br><code>exclude_keywords</code> skip anyone whose name, headline or location contains these.<br><code>network</code> F (1st), S (2nd), O (3rd+).<br><code>max_pages_per_search</code> 10 people per page.<br><code>max_results</code> stop after this many new leads per run.<br><code>leadgen</code> daily caps, working hours, delays for this campaign.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- SESSION -->
+<section class="page" id="p-session">
+  <div class="head"><div><h1>LinkedIn &amp; engine</h1><p>Your LinkedIn sign-in lives in a browser profile on this computer. This page never sees your password.</p></div></div>
+  <div class="grid g2">
+    <div class="panel">
+      <h3>LinkedIn session</h3>
+      <div class="row" style="align-items:flex-start">
+        <div class="radar" id="radar"></div>
+        <div style="flex:1;min-width:220px">
+          <div id="sess-state" style="font-size:16px;font-weight:500">Not checked yet</div>
+          <div class="mono" id="sess-detail" style="color:var(--muted);font-size:12px;margin-top:4px;white-space:pre-wrap;max-height:120px;overflow:auto"></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" onclick="sessionCheck()">Check session</button>
+        <button class="btn go" onclick="sessionLogin()">Sign in (opens LinkedIn)</button>
+        <select id="import-browser"><option value="auto">most recent browser</option><option>chrome</option><option>edge</option><option>brave</option><option>chromium</option><option>arc</option><option>vivaldi</option><option>opera</option></select>
+        <button class="btn blue" onclick="sessionImport()">Import from browser</button>
+        <button class="btn danger sm" onclick="sessionLogout()">Sign out</button>
+      </div>
+      <div class="note" style="margin-top:12px">Sign in opens LinkedIn in a separate window; you type your credentials there, and the session is saved under <code>~/.linkedin-mcp</code>. Import copies the session from a browser where you are already signed in. Either way, the console stores nothing.</div>
+    </div>
+    <div class="panel">
+      <h3>Engine (the MCP server)</h3>
+      <div id="eng-state" style="font-size:16px;font-weight:500">Stopped</div>
+      <div class="mono" id="eng-detail" style="color:var(--muted);font-size:12px;margin-top:4px"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn go" id="eng-start" onclick="engineStart()">Start engine</button>
+        <button class="btn danger" id="eng-stop" onclick="engineStop()">Stop engine</button>
+        <label class="row" style="gap:6px;color:var(--muted);font-size:13px"><input type="checkbox" id="eng-show"> show the browser window</label>
+      </div>
+      <div class="note" style="margin-top:12px">The engine is the LinkedIn browser plus the tool server. Start it before finding leads; stop it when you are done so the browser closes. One run at a time.</div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h3>Activity</h3><div class="log" id="log-session"></div></div>
+</section>
+
+<!-- RUN -->
+<section class="page" id="p-run">
+  <div class="head"><div><h1>Find leads</h1><p>Runs every search in the target profile, pages through results, skips exclusions and saves new people to the store.</p></div></div>
+  <div class="grid g2">
+    <div class="panel">
+      <div class="row">
+        <label class="f">Stop after this many new leads<input type="number" id="run-max" min="1" max="1000" placeholder="from profile"></label>
+        <label class="f">Pages per search<input type="number" id="run-pages" min="1" max="20" placeholder="from profile"></label>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn go" id="run-go" onclick="runFind()">Run find_icp_leads</button>
+        <button class="btn danger" id="run-stop" onclick="jobStop()" disabled>Stop</button>
+        <span id="run-note" style="color:var(--muted);font-size:13px"></span>
+      </div>
+      <div style="margin-top:16px"><div class="prog" id="run-prog"><i></i></div>
+        <div class="mono" id="run-msg" style="color:var(--muted);font-size:12px;margin-top:6px">idle</div></div>
+      <div class="note" style="margin-top:14px">Each page read spends one search from today's budget. The run stops on its own when the budget is used up, when LinkedIn rate-limits, or when a search runs dry.</div>
+    </div>
+    <div class="panel"><h3>Last result</h3><pre class="out" id="run-result">—</pre></div>
+  </div>
+  <div class="panel" style="margin-top:14px"><h3>Live log</h3><div class="log tall" id="log-run"></div></div>
+</section>
+
+<!-- LEADS -->
+<section class="page" id="p-leads">
+  <div class="head"><div><h1>Leads</h1><p>Everyone the pipeline has found. Change a status or score inline; notes save on blur.</p></div>
+    <div class="row"><a class="btn" id="exp-csv" href="/api/leads/export?format=csv" download>Download CSV</a><a class="btn" id="exp-json" href="/api/leads/export?format=json" download>Download JSON</a></div></div>
+  <div class="row" style="margin-bottom:12px">
+    <input type="text" id="ld-q" placeholder="search name, company, headline…" style="min-width:260px" oninput="debounce(loadLeads)">
+    <select id="ld-status" onchange="loadLeads()"><option value="">any status</option></select>
+    <label class="f" style="flex-direction:row;align-items:center;gap:8px">min score<input type="number" id="ld-min" min="0" max="100" style="width:70px" onchange="loadLeads()"></label>
+    <span class="chip" id="ld-count">0 shown</span>
+    <button class="btn sm" onclick="loadLeads()">Refresh</button>
+  </div>
+  <div class="twrap"><table id="ld-table">
+    <thead><tr><th>Person</th><th>Title · company</th><th>Location</th><th>Found by</th><th>Score</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody id="ld-body"></tbody></table>
+    <div class="empty" id="ld-empty" style="display:none">No leads yet. Save a target profile, start the engine, then run Find leads.</div></div>
+</section>
+
+<!-- TOOLS -->
+<section class="page" id="p-tools">
+  <div class="head"><div><h1>Tool console</h1><p>Every tool the engine offers, callable by hand. Useful for one profile, one company or one search.</p></div></div>
+  <div class="tools">
+    <div class="panel" style="padding:0"><div class="toollist" id="tool-list"><div class="empty">Start the engine to list tools.</div></div></div>
+    <div>
+      <div class="panel"><h2 id="tool-name">—</h2><p id="tool-desc" style="color:var(--muted);white-space:pre-wrap;font-size:13px"></p>
+        <div class="args" id="tool-args"></div>
+        <div class="row" style="margin-top:12px"><button class="btn go" id="tool-run" onclick="runTool()" disabled>Run</button><span id="tool-cost" class="chip"></span></div></div>
+      <div class="panel" style="margin-top:14px"><h3>Result</h3><pre class="out" id="tool-out">—</pre></div>
+    </div>
+  </div>
+</section>
+
+<!-- GUIDE -->
+<section class="page" id="p-guide">
+  <div class="head"><div><h1>Guide</h1><p>How to use the console, page by page.</p></div></div>
+  <div class="panel guide" id="guide-body">Loading…</div>
+</section>
+
+</main>
+<div id="toast"></div>
+
+<script>
+/* ---------- state ---------- */
+const S={state:null,leads:[],tool:null,dirty:false};
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtT=(ts)=>new Date(ts*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+let _deb;function debounce(fn){clearTimeout(_deb);_deb=setTimeout(fn,250);}
+
+async function api(path,opts={}){
+  const r=await fetch(path,{headers:{'Content-Type':'application/json'},...opts,body:opts.body?JSON.stringify(opts.body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){throw new Error(j.error||r.statusText);}
+  return j;
+}
+function toast(msg,err){const d=document.createElement('div');d.textContent=msg;if(err)d.className='err';$('toast').appendChild(d);setTimeout(()=>d.remove(),err?6000:3200);}
+
+/* ---------- nav ---------- */
+function go(p){document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
+  document.querySelectorAll('.page').forEach(s=>s.classList.toggle('active',s.id==='p-'+p));
+  if(p==='leads')loadLeads();if(p==='guide')loadGuide();if(p==='tools')renderTools();}
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.page));
+document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select'))return;const m={1:'overview',2:'icp',3:'session',4:'run',5:'leads',6:'tools',7:'guide'}[e.key];if(m)go(m);});
+
+/* ---------- logs ---------- */
+function logLine(entry){const {level,message}=entry.data;const line=`<span class="ts">${fmtT(entry.ts)}</span> <span class="${level}">${esc(message)}</span>\n`;
+  for(const id of ['log-overview','log-session','log-run']){const el=$(id);if(!el)continue;const cur=el.querySelector('.cur');if(cur)cur.remove();el.insertAdjacentHTML('beforeend',line);el.insertAdjacentHTML('beforeend','<span class="cur"></span>');el.scrollTop=el.scrollHeight;}}
+
+/* ---------- render ---------- */
+function renderStats(st){
+  const b=st.budget,a=b.actions;const L=st.leads||{};
+  $('o-total').textContent=L.total||0;$('o-new').textContent=L.new||0;$('o-qual').textContent=L.qualified||0;
+  $('o-today').textContent=a.searches?a.searches.used:0;
+  $('s-store-d').textContent=`${L.total||0} leads`;
+  $('m-search').textContent=`${a.searches.used} / ${a.searches.cap}`;
+  $('m-search-bar').style.width=(100*a.searches.used/Math.max(1,a.searches.cap))+'%';
+  $('m-view-bar').style.width=(100*a.profile_views.used/Math.max(1,a.profile_views.cap))+'%';
+  $('o-budget').innerHTML=Object.entries(a).map(([k,v])=>`<div style="margin-bottom:8px"><div class="row" style="justify-content:space-between"><span>${k.replace('_',' ')}</span><span class="mono">${v.used} / ${v.cap}</span></div><div class="bar ${k==='profile_views'?'blue':''}"><i style="width:${100*v.used/Math.max(1,v.cap)}%"></i></div></div>`).join('');
+  $('o-hours').innerHTML=`Working hours ${esc(b.working_hours)} · ${b.within_hours?'<span class="ok">open now</span>':'<span style="color:var(--amber)">closed now: LinkedIn actions are refused until the window opens</span>'} · caps reset at midnight`;
+  $('o-runs').innerHTML=(st.recent_runs||[]).length?st.recent_runs.map(r=>{const s=r.summary||{};return `<div style="padding:5px 0;border-bottom:1px dashed var(--line)">${esc(r.started_at.slice(0,16).replace('T',' '))} · ${esc(r.kind)} · <span class="ok">${s.new??'?'} new</span> / ${s.found??'?'} found · ${esc(s.stopped_because||'')}</div>`}).join(''):'<div class="empty" style="padding:14px">No runs yet.</div>';
+}
+function renderEngine(e){const on=e.running;$('l-engine').className='light'+(on?' on':'');$('t-engine').textContent=on?'running':'off';
+  $('eng-state').textContent=on?'Running':'Stopped';$('eng-detail').textContent=on?`${e.url} · pid ${e.pid} · ${e.tool_count} tools · ${e.headless?'headless':'visible browser'}`:'';
+  $('eng-start').disabled=on;$('eng-stop').disabled=!on;$('run-go').disabled=!on||!!S.state?.active_job;
+  if(!on)$('s-search-d').textContent='engine off';else if(!S.state?.active_job)$('s-search-d').textContent='ready';}
+function renderSession(s){const r=$('radar');r.classList.remove('scan');if(!s){$('sess-state').textContent='Not checked yet';$('l-session').className='light';$('t-session').textContent='unknown';return;}
+  r.classList.toggle('good',s.valid);r.classList.toggle('bad',!s.valid);$('sess-state').textContent=s.valid?'Signed in':'No valid session';$('sess-state').style.color=s.valid?'var(--green)':'var(--red)';
+  $('sess-detail').textContent=s.detail;$('l-session').className='light'+(s.valid?' on':' bad');$('t-session').textContent=s.valid?'signed in':'signed out';}
+function renderIcp(st){$('icp-path').textContent=st.stats.settings.icp_path.split(/[\\/]/).pop();$('icp-path').title=st.stats.settings.icp_path;if(!S.dirty)$('icp-text').value=st.icp_text;renderSearches(st.icp,st.searches,st.icp_error);
+  $('s-icp-d').textContent=st.icp?`${st.searches.length} searches`:'invalid';$('s-icp').classList.toggle('on',!!st.icp);}
+function renderSearches(icp,searches,error){$('icp-searches').innerHTML=error?`<div class="err">${esc(error)}</div>`:searches.map(s=>`<div>${esc(s.keywords)}${s.location?' <span style="color:var(--muted)">in</span> '+esc(s.location):''}${s.network?' <span class="chip b">'+s.network.join('')+'</span>':''}</div>`).join('')||'<div class="empty">No searches.</div>';
+  $('icp-count').textContent=`${searches.length} searches`;$('icp-pages').textContent=icp?`${searches.length*icp.max_pages_per_search} pages max`:'—';}
+function renderJob(j){const run=j&&j.status==='running';$('strip').classList.toggle('running',run);$('l-job').className='light'+(run?' busy':'');$('t-job').textContent=run?j.kind:'idle';
+  $('run-stop').disabled=!run;$('run-go').disabled=run||!S.state?.engine?.running;$('tool-run').disabled=run||!S.tool;
+  for(const id of ['s-search','s-parse','s-store'])$(id).classList.toggle('hot',run&&j.kind==='find_icp_leads');
+  if(run){$('s-search-d').textContent='searching';$('s-parse-d').textContent='filtering';}else{$('s-parse-d').textContent='—';if(S.state?.engine?.running)$('s-search-d').textContent='ready';}
+  if(!j)return;
+  if(j.kind==='find_icp_leads'){const p=$('run-prog');p.classList.toggle('indet',run&&!j.total);p.querySelector('i').style.width=j.total?(100*j.progress/j.total)+'%':(run?'':'100%');
+    $('run-msg').textContent=run?(j.message||'starting…'):`${j.status}${j.error?': '+j.error:''}`;
+    if(!run&&j.result)$('run-result').textContent=JSON.stringify(j.result,null,2);
+    if(!run&&j.error)$('run-result').textContent=j.error;$('run-note').textContent=run?'running… you can leave this page':'';}
+  if(j.kind.startsWith('tool:')&&!run){$('tool-out').textContent=j.error?j.error:JSON.stringify(j.result,null,2);}
+  if(j.kind==='login'||j.kind==='import'||j.kind==='logout'){$('radar').classList.toggle('scan',run);}
+}
+function renderAll(st){S.state=st;renderIcp(st);renderStats(st.stats);renderEngine(st.engine);renderSession(st.session);
+  const sel=$('ld-status');if(sel.options.length<=1)st.statuses.forEach(s=>sel.insertAdjacentHTML('beforeend',`<option>${s}</option>`));
+  for(const id of ['log-overview','log-session','log-run'])$(id).innerHTML='';(st.log||[]).forEach(logLine);renderJob(st.active_job||st.jobs?.[st.jobs.length-1]||null);renderTools();}
+
+/* ---------- ICP ---------- */
+function icpDirty(){S.dirty=true;$('icp-msg').innerHTML='<span style="color:var(--amber)">Unsaved changes</span>';debounce(validateIcp);}
+async function validateIcp(){const r=await api('/api/icp/validate',{method:'POST',body:{text:$('icp-text').value}});
+  if(r.ok){renderSearches(r.icp,r.searches,null);if(!S.dirty)$('icp-msg').innerHTML='<span class="ok">Valid</span>';else $('icp-msg').innerHTML='<span class="ok">Valid</span> · <span style="color:var(--amber)">unsaved</span>';}
+  else{renderSearches(null,[],r.error);$('icp-msg').innerHTML=`<span class="err">${esc(r.error)}</span>`;}return r.ok;}
+async function saveIcp(){try{const r=await api('/api/icp',{method:'PUT',body:{text:$('icp-text').value}});S.dirty=false;$('icp-msg').innerHTML=`<span class="ok">Saved</span> to ${esc(r.path)}`;renderSearches(r.icp,r.searches,null);renderStats(r.stats);$('s-icp-d').textContent=`${r.searches.length} searches`;$('s-icp').classList.add('on');toast('Target profile saved');}catch(e){$('icp-msg').innerHTML=`<span class="err">${esc(e.message)}</span>`;toast(e.message,true);}}
+
+/* ---------- session / engine ---------- */
+async function sessionCheck(){$('radar').classList.add('scan');try{renderSession(await api('/api/session/check',{method:'POST'}));}catch(e){toast(e.message,true);}$('radar').classList.remove('scan');}
+async function sessionLogin(){try{await api('/api/session/login',{method:'POST'});toast('Sign in using the LinkedIn window that just opened');}catch(e){toast(e.message,true);}}
+async function sessionImport(){try{await api('/api/session/import',{method:'POST',body:{browser:$('import-browser').value}});}catch(e){toast(e.message,true);}}
+async function sessionLogout(){if(!confirm('Sign out and clear the saved LinkedIn session?'))return;try{await api('/api/session/logout',{method:'POST'});}catch(e){toast(e.message,true);}}
+async function engineStart(){$('eng-start').disabled=true;$('eng-state').textContent='Starting…';try{const r=await api('/api/engine/start',{method:'POST',body:{show_browser:$('eng-show').checked}});S.state.engine=r;S.state.tools=r.tools;renderEngine(r);renderTools();toast('Engine running');}catch(e){toast(e.message,true);$('eng-start').disabled=false;$('eng-state').textContent='Stopped';}}
+async function engineStop(){try{const r=await api('/api/engine/stop',{method:'POST'});S.state.engine=r;S.state.tools=[];renderEngine(r);renderTools();}catch(e){toast(e.message,true);}}
+
+/* ---------- run ---------- */
+async function runFind(){try{$('run-result').textContent='—';const j=await api('/api/run/find',{method:'POST',body:{max_results:$('run-max').value,max_pages_per_search:$('run-pages').value}});S.state.active_job=j;renderJob(j);}catch(e){toast(e.message,true);}}
+async function jobStop(){try{await api('/api/run/stop',{method:'POST'});}catch(e){toast(e.message,true);}}
+
+/* ---------- leads ---------- */
+async function loadLeads(){const q=new URLSearchParams({q:$('ld-q').value,status:$('ld-status').value,min_score:$('ld-min').value,limit:500});
+  const r=await api('/api/leads?'+q);S.leads=r.leads;$('ld-count').textContent=`${r.count} shown · ${r.totals.total||0} total`;
+  const x=new URLSearchParams({status:$('ld-status').value,min_score:$('ld-min').value});$('exp-csv').href='/api/leads/export?format=csv&'+x;$('exp-json').href='/api/leads/export?format=json&'+x;
+  $('ld-empty').style.display=r.leads.length?'none':'block';
+  $('ld-body').innerHTML=r.leads.map(l=>`<tr data-u="${esc(l.username)}">
+    <td><a href="${esc(l.profile_url)}" target="_blank" rel="noopener">${esc(l.name||l.username)}</a><div class="sub mono">${esc(l.username)}</div></td>
+    <td>${esc(l.title||'')}${l.company?'<div class="sub">'+esc(l.company)+'</div>':''}${!l.title&&l.headline?'<div class="sub">'+esc(l.headline)+'</div>':''}</td>
+    <td>${esc(l.location||'')}</td>
+    <td class="sub">${esc(l.source_query||'')}</td>
+    <td><input type="number" min="0" max="100" value="${l.score??''}" class="score ${l.score>=70?'hi':l.score>=40?'mid':l.score!=null?'lo':''}" style="width:64px" onchange="patch('${esc(l.username)}',{score:this.value})"></td>
+    <td><select onchange="patch('${esc(l.username)}',{status:this.value})">${S.state.statuses.map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}</select></td>
+    <td><input type="text" value="${esc(l.notes||'')}" placeholder="notes" style="width:180px" onchange="patch('${esc(l.username)}',{notes:this.value})"></td></tr>`).join('');}
+async function patch(u,fields){try{await api('/api/leads/'+encodeURIComponent(u),{method:'PATCH',body:fields});toast('Saved '+u);}catch(e){toast(e.message,true);}}
+
+/* ---------- tools ---------- */
+const COST={search_people:'1 search',search_companies:'1 search',search_jobs:'1 search',search_posts:'1 search',get_person_profile:'1 profile view',get_company_profile:'1 profile view',get_company_employees:'1 profile view',get_company_posts:'1 profile view',get_sidebar_profiles:'1 profile view',get_job_details:'1 profile view',connect_with_person:'1 connect',send_message:'1 message',find_icp_leads:'1 search per page'};
+function renderTools(){const tools=S.state?.tools||[];const list=$('tool-list');if(!tools.length){list.innerHTML='<div class="empty">Start the engine to list tools.</div>';return;}
+  list.innerHTML=tools.map(t=>`<button class="${S.tool?.name===t.name?'active':''}" onclick="pickTool('${t.name}')">${t.name}<span class="tag">${(t.tags||[])[0]||''}</span></button>`).join('');}
+function pickTool(name){const t=(S.state.tools||[]).find(x=>x.name===name);S.tool=t;renderTools();$('tool-name').textContent=t.name;$('tool-desc').textContent=t.description;$('tool-cost').textContent=COST[name]?'costs '+COST[name]:'free';
+  const props=t.input_schema?.properties||{};const req=new Set(t.input_schema?.required||[]);
+  $('tool-args').innerHTML=Object.entries(props).map(([k,p])=>{const ty=p.type||(p.anyOf||[]).map(a=>a.type).filter(t=>t&&t!=='null')[0]||'string';
+    const d=(p.description||'').split('\n')[0];return `<label class="f">${k}${req.has(k)?' *':''} <span style="color:var(--dim)">${ty}</span>${d?'<span style="font-size:11.5px;color:var(--dim)">'+esc(d.slice(0,120))+'</span>':''}<input type="text" data-k="${k}" data-t="${ty}" placeholder="${p.default!=null?esc(JSON.stringify(p.default)):''}"></label>`;}).join('')||'<div class="sub">No arguments.</div>';
+  $('tool-run').disabled=!!S.state.active_job;$('tool-out').textContent='—';}
+async function runTool(){if(!S.tool)return;const args={};for(const i of $('tool-args').querySelectorAll('input')){const v=i.value.trim();if(!v)continue;const t=i.dataset.t;
+    try{args[i.dataset.k]=t==='integer'||t==='number'?Number(v):t==='boolean'?v==='true':t==='array'?(v.startsWith('[')?JSON.parse(v):v.split(',').map(s=>s.trim())):v;}catch{args[i.dataset.k]=v;}}
+  $('tool-out').textContent='running…';try{const j=await api('/api/run/tool/'+S.tool.name,{method:'POST',body:{arguments:args}});S.state.active_job=j;renderJob(j);}catch(e){$('tool-out').textContent=e.message;toast(e.message,true);}}
+
+/* ---------- guide ---------- */
+let guideLoaded=false;
+async function loadGuide(){if(guideLoaded)return;const md=await (await fetch('/api/guide')).text();$('guide-body').innerHTML=mdToHtml(md);guideLoaded=true;}
+function mdToHtml(md){const lines=md.split('\n');let out='',inList=null,inTable=false,inCode=false;
+  const inline=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>');
+  const close=()=>{if(inList){out+=`</${inList}>`;inList=null;}if(inTable){out+='</tbody></table>';inTable=false;}};
+  for(const raw of lines){const l=raw.replace(/\s+$/,'');
+    if(l.startsWith('```')){if(inCode){out+='</pre>';inCode=false;}else{close();out+='<pre class="out">';inCode=true;}continue;}
+    if(inCode){out+=esc(l)+'\n';continue;}
+    if(/^#{1,3} /.test(l)){close();const n=l.match(/^#+/)[0].length;if(n===1)continue;out+=`<h${n}>${inline(l.replace(/^#+ /,''))}</h${n}>`;continue;}
+    if(/^\|/.test(l)){if(/^\|[\s:-]+\|/.test(l))continue;const cells=l.split('|').slice(1,-1).map(c=>c.trim());if(!inTable){close();out+='<table><thead><tr>'+cells.map(c=>`<th>${inline(c)}</th>`).join('')+'</tr></thead><tbody>';inTable=true;}else out+='<tr>'+cells.map(c=>`<td>${inline(c)}</td>`).join('')+'</tr>';continue;}
+    if(/^\s*[-*] /.test(l)){if(inList!=='ul'){close();out+='<ul>';inList='ul';}out+=`<li>${inline(l.replace(/^\s*[-*] /,''))}</li>`;continue;}
+    if(/^\s*\d+\. /.test(l)){if(inList!=='ol'){close();out+='<ol>';inList='ol';}out+=`<li>${inline(l.replace(/^\s*\d+\. /,''))}</li>`;continue;}
+    if(/^> /.test(l)){close();out+=`<blockquote>${inline(l.slice(2))}</blockquote>`;continue;}
+    if(!l.trim()){close();continue;}
+    close();out+=`<p>${inline(l)}</p>`;}
+  close();return out;}
+
+/* ---------- events ---------- */
+function connect(){const es=new EventSource('/api/events');
+  es.onmessage=ev=>{const m=JSON.parse(ev.data);switch(m.event){
+    case 'log':logLine(m);break;
+    case 'stats':S.state.stats=m.data;renderStats(m.data);break;
+    case 'engine':S.state.engine=m.data;renderEngine(m.data);break;
+    case 'session':S.state.session=m.data;renderSession(m.data);break;
+    case 'progress':if(S.state.active_job&&S.state.active_job.id===m.data.job){Object.assign(S.state.active_job,m.data);renderJob(S.state.active_job);}break;
+    case 'job':S.state.active_job=m.data.status==='running'?m.data:null;renderJob(m.data);if(m.data.status!=='running'){if(document.querySelector('#p-leads.active'))loadLeads();if(m.data.kind.startsWith('tool:'))$('tool-run').disabled=false;}break;}};
+  es.onerror=()=>{setTimeout(()=>{es.close();connect();},3000);};}
+
+/* ---------- boot ---------- */
+(async()=>{renderAll(await api('/api/state'));connect();if(!S.state.session)sessionCheck();})();
+</script>
+</body>
+</html>
